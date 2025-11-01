@@ -482,6 +482,34 @@ body {
     background: var(--light-bg);
 }
 
+.loading-messages,
+.no-messages,
+.error-messages,
+.firebase-notice {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.firebase-notice {
+    background: #fff9e6;
+    border-radius: 15px;
+    padding: 30px;
+    margin-top: 20px;
+    border: 1px solid #ffe4a3;
+}
+
+.firebase-notice p {
+    margin: 10px 0;
+    color: #666;
+}
+
+.firebase-notice p:first-child {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
 .guestbook-form {
     max-width: 600px;
     margin: 0 auto 50px;

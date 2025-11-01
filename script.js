@@ -1,4 +1,31 @@
+// ============================================
+// Firebase 설정 및 초기화
+// ============================================
+// Firebase 프로젝트 설정 (https://console.firebase.google.com 에서 생성)
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// Firebase 초기화
+let db = null;
+try {
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        console.log('Firebase 초기화 성공');
+    }
+} catch (error) {
+    console.error('Firebase 초기화 실패:', error);
+}
+
+// ============================================
 // D-Day 계산
+// ============================================
 function calculateDday() {
     const weddingDate = new Date('2026-10-31');
     const today = new Date();
@@ -61,8 +88,12 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ============================================
+// 축하 메시지 기능 (Firebase 연동)
+// ============================================
+
 // 메시지 추가
-function addMessage() {
+async function addMessage() {
     const nameInput = document.getElementById('guestName');
     const messageInput = document.getElementById('guestMessage');
     const name = nameInput.value.trim();
@@ -73,34 +104,133 @@ function addMessage() {
         return;
     }
 
-    const messagesDiv = document.getElementById('messages');
-    const today = new Date().toISOString().split('T')[0].replace(/-/g, '.');
+    if (!db) {
+        showNotification('데이터베이스 연결이 필요합니다. Firebase 설정을 확인해주세요.');
+        return;
+    }
 
-    const messageHTML = `
-        <div class="message-card" style="animation: fadeInUp 0.5s ease-out;">
-            <div class="message-header">
-                <span class="message-name">${escapeHtml(name)}</span>
-                <span class="message-date">${today}</span>
+    try {
+        // Firestore에 메시지 저장
+        await db.collection('messages').add({
+            name: name,
+            message: message,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            date: new Date().toISOString().split('T')[0].replace(/-/g, '.')
+        });
+
+        // 입력 필드 초기화
+        nameInput.value = '';
+        messageInput.value = '';
+
+        showNotification('축하 메시지가 등록되었습니다! ❤️');
+
+        // 메시지 목록 새로고침
+        loadMessages();
+    } catch (error) {
+        console.error('메시지 저장 실패:', error);
+        showNotification('메시지 저장에 실패했습니다. 다시 시도해주세요.');
+    }
+}
+
+// 메시지 불러오기
+async function loadMessages() {
+    if (!db) {
+        // Firebase가 설정되지 않은 경우 샘플 메시지 표시
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = `
+            <div class="message-card">
+                <div class="message-header">
+                    <span class="message-name">김철수</span>
+                    <span class="message-date">2025.05.30</span>
+                </div>
+                <p class="message-text">결혼을 진심으로 축하합니다! 항상 행복하세요!</p>
             </div>
-            <p class="message-text">${escapeHtml(message)}</p>
-        </div>
-    `;
+            <div class="message-card">
+                <div class="message-header">
+                    <span class="message-name">박영희</span>
+                    <span class="message-date">2025.05.29</span>
+                </div>
+                <p class="message-text">두 분의 앞날에 축복이 가득하길 바랍니다 ❤️</p>
+            </div>
+            <div class="firebase-notice">
+                <p>💡 Firebase 설정 필요</p>
+                <p style="font-size: 0.85rem; color: #999;">script.js 파일의 firebaseConfig를 설정하면 실시간 메시지 기능을 사용할 수 있습니다.</p>
+            </div>
+        `;
+        return;
+    }
 
-    messagesDiv.insertAdjacentHTML('afterbegin', messageHTML);
+    try {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '<div class="loading-messages"><p>메시지를 불러오는 중...</p></div>';
 
-    // 입력 필드 초기화
-    nameInput.value = '';
-    messageInput.value = '';
+        // Firestore에서 메시지 가져오기 (최신순)
+        const snapshot = await db.collection('messages')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
 
-    showNotification('축하 메시지가 등록되었습니다! ❤️');
+        messagesDiv.innerHTML = '';
+
+        if (snapshot.empty) {
+            messagesDiv.innerHTML = '<div class="no-messages"><p>첫 번째 축하 메시지를 남겨주세요! 💕</p></div>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const messageHTML = `
+                <div class="message-card" style="animation: fadeInUp 0.5s ease-out;">
+                    <div class="message-header">
+                        <span class="message-name">${escapeHtml(data.name)}</span>
+                        <span class="message-date">${data.date || '날짜 없음'}</span>
+                    </div>
+                    <p class="message-text">${escapeHtml(data.message)}</p>
+                </div>
+            `;
+            messagesDiv.insertAdjacentHTML('beforeend', messageHTML);
+        });
+    } catch (error) {
+        console.error('메시지 불러오기 실패:', error);
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '<div class="error-messages"><p>메시지를 불러오는데 실패했습니다.</p></div>';
+    }
 }
 
-// HTML 이스케이프
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// 실시간 메시지 업데이트 리스너
+function setupRealtimeMessages() {
+    if (!db) return;
+
+    db.collection('messages')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .onSnapshot((snapshot) => {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+
+            if (snapshot.empty) {
+                messagesDiv.innerHTML = '<div class="no-messages"><p>첫 번째 축하 메시지를 남겨주세요! 💕</p></div>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const messageHTML = `
+                    <div class="message-card">
+                        <div class="message-header">
+                            <span class="message-name">${escapeHtml(data.name)}</span>
+                            <span class="message-date">${data.date || '날짜 없음'}</span>
+                        </div>
+                        <p class="message-text">${escapeHtml(data.message)}</p>
+                    </div>
+                `;
+                messagesDiv.insertAdjacentHTML('beforeend', messageHTML);
+            });
+        }, (error) => {
+            console.error('실시간 업데이트 오류:', error);
+        });
 }
+
 
 // 지도 열기 함수들
 function openKakaoMap() {
@@ -168,6 +298,13 @@ function handleScrollAnimation() {
     });
 }
 
+// HTML 이스케이프 (XSS 방지)
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Enter 키로 메시지 전송
 document.addEventListener('DOMContentLoaded', function() {
     const messageInput = document.getElementById('guestMessage');
@@ -185,6 +322,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 스크롤 애니메이션 초기화
     handleScrollAnimation();
+
+    // 메시지 불러오기
+    if (db) {
+        // 실시간 리스너 설정
+        setupRealtimeMessages();
+    } else {
+        // Firebase가 설정되지 않은 경우 샘플 메시지 표시
+        loadMessages();
+    }
 });
 
 // 부드러운 스크롤

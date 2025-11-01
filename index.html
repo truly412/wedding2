@@ -16,6 +16,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <!-- 히어로 섹션 -->
@@ -290,19 +294,8 @@
                 <button onclick="addMessage()" class="submit-btn">메시지 남기기</button>
             </div>
             <div class="messages-container" id="messages">
-                <div class="message-card">
-                    <div class="message-header">
-                        <span class="message-name">김철수</span>
-                        <span class="message-date">2025.05.30</span>
-                    </div>
-                    <p class="message-text">결혼을 진심으로 축하합니다! 항상 행복하세요!</p>
-                </div>
-                <div class="message-card">
-                    <div class="message-header">
-                        <span class="message-name">박영희</span>
-                        <span class="message-date">2025.05.29</span>
-                    </div>
-                    <p class="message-text">두 분의 앞날에 축복이 가득하길 바랍니다 ❤️</p>
+                <div class="loading-messages">
+                    <p>메시지를 불러오는 중...</p>
                 </div>
             </div>
         </div>
