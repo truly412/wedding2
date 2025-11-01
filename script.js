@@ -1,6 +1,6 @@
 // D-Day 계산
 function calculateDday() {
-    const weddingDate = new Date('2025-06-14');
+    const weddingDate = new Date('2026-10-31');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diff = weddingDate - today;
@@ -118,10 +118,31 @@ function openGoogleMap() {
     // 실제 구현 시: window.open('구글맵 URL');
 }
 
-// 갤러리 열기
-function openGallery(index) {
-    showNotification('갤러리 기능 (이미지 ' + (index + 1) + ')');
-    // 실제 구현 시: 이미지 모달 팝업 표시
+// 갤러리 이미지 선택
+let currentGalleryIndex = 0;
+
+function selectGalleryImage(index) {
+    currentGalleryIndex = index;
+
+    // 모든 썸네일에서 active 클래스 제거
+    document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+        thumb.classList.remove('active');
+    });
+
+    // 선택된 썸네일에 active 클래스 추가
+    const selectedThumb = document.querySelector(`.gallery-thumb[data-index="${index}"]`);
+    if (selectedThumb) {
+        selectedThumb.classList.add('active');
+
+        // 선택된 썸네일이 보이도록 스크롤
+        selectedThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    // 메인 이미지 업데이트
+    const mainImage = document.getElementById('mainGalleryImage');
+    if (mainImage) {
+        mainImage.innerHTML = `📸<br>사진 ${index + 1}`;
+    }
 }
 
 // 스크롤 애니메이션
@@ -179,3 +200,95 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         }
     });
 });
+
+// 스크롤 인디케이터 클릭 시 greeting 섹션으로 이동
+function scrollToGreeting() {
+    const greetingSection = document.querySelector('.greeting-section');
+    if (greetingSection) {
+        greetingSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// 배경음악 컨트롤
+let isMusicPlaying = false;
+const bgMusic = document.getElementById('bgMusic');
+const musicIcon = document.getElementById('musicIcon');
+
+function toggleMusic() {
+    if (isMusicPlaying) {
+        bgMusic.pause();
+        musicIcon.textContent = '🔇';
+        isMusicPlaying = false;
+    } else {
+        bgMusic.play().then(() => {
+            musicIcon.textContent = '🔊';
+            isMusicPlaying = true;
+        }).catch(() => {
+            showNotification('음악 재생에 실패했습니다');
+        });
+    }
+}
+
+// 페이지 로드 시 음악 자동 재생 시도
+window.addEventListener('load', () => {
+    bgMusic.play().then(() => {
+        isMusicPlaying = true;
+        musicIcon.textContent = '🔊';
+    }).catch(() => {
+        // 자동 재생 실패 (브라우저 정책)
+        isMusicPlaying = false;
+        musicIcon.textContent = '🔇';
+    });
+});
+
+// 참석의사 모달 열기
+function openAttendanceForm() {
+    const modal = document.getElementById('attendanceModal');
+    if (modal) {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// 참석의사 모달 닫기
+function closeAttendanceForm() {
+    const modal = document.getElementById('attendanceModal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// 모달 외부 클릭 시 닫기
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('attendanceModal');
+    if (e.target === modal) {
+        closeAttendanceForm();
+    }
+});
+
+// 참석의사 제출
+function submitAttendance(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('attendanceName').value;
+    const phone = document.getElementById('attendancePhone').value;
+    const attendance = document.querySelector('input[name="attendance"]:checked').value;
+    const count = document.getElementById('attendanceCount').value;
+    const meal = document.querySelector('input[name="meal"]:checked').value;
+    const message = document.getElementById('attendanceMessage').value;
+
+    // 여기서 실제로는 서버로 데이터를 전송해야 합니다
+    console.log({
+        name, phone, attendance, count, meal, message
+    });
+
+    showNotification('참석 의사가 전달되었습니다 ✓');
+    closeAttendanceForm();
+
+    // 폼 초기화
+    event.target.reset();
+}
